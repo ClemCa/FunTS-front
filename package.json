@@ -1,0 +1,25 @@
+{
+  "name": "clemfun-ts-front",
+  "version": "0.0.7",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "tsc && tsc-alias",
+    "test": "./dist/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ClemCa/FunTS.git"
+  },
+  "author": "ClemCa",
+  "license": "GLWTPL",
+  "bugs": {
+    "url": "https://github.com/ClemCa/FunTS/issues"
+  },
+  "homepage": "https://github.com/ClemCa/FunTS#readme",
+  "devDependencies": {
+    "tsc-alias": "^1.8.10",
+    "typescript": "^5.7.2"
+  }
+}
