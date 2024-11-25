@@ -2,6 +2,7 @@ import { LoadApp } from "index";
 import schema, { Schema } from "test/schema";
 
 const app = LoadApp<Schema>(schema, "localhost:3000");
+app.$settings.set({concurrency_limit: 10, default_stale: 3600, unlimited_direct: false});
 
 const plug = app.$1();
 let spark = plug.queue({a: 0, b: 2, c: 0});

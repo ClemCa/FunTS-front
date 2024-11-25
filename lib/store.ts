@@ -49,6 +49,9 @@ export class Store {
     has(key: string): boolean {
         return this.__internal.has(key);
     }
+    fragment<T>(key: string): Fragment<T | undefined> {
+        return new Fragment<T | undefined>(key, this);
+    }
     get<T>(key: string): T | undefined {
         const element = this.__internal.get(key);
         return element?.value;

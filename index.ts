@@ -1,65 +1,47 @@
 import { store } from "lib/internal";
-type Raw<T> = object & {"::": {}}
-type AppData = {
-}
+import { GeneratePlug } from "lib/plug";
+import { AppData, AppSettings, Plugify, Raw } from "lib/types";
 
-type Volatile = string | number | boolean;
-
-type VolatileBottle<T extends Volatile> = {
-    value: T;
-    caught: boolean;
-    uncork: () => T;
-}
-
-type Bottle<T> = T extends Volatile ? VolatileBottle<T> : T;
-
-type Spark<T> = {
-    with: (opt: {
-        priority?: number,
-        expectation?: number,
-        stale?: number,
-        renewable?: boolean,
-    }) => Spark<T>;
-    promise: () => Promise<T>;
-    bottle: () => Bottle<T>;
-    catch: () => Promise<void>;
-}
-
-type Plug<T, U> = () => {
-    (args: T): Spark<U>;
-    queue: (args: T) => Spark<U>;
-}
-
-type ArgsType<T> = T extends (...args: infer U) => any ? U[0] : never;
-type ReturnType<T> = T extends (...args: any) => infer U ? U : never;
-
-type Plugify<T> = T extends Function ? Plug<ArgsType<T>, ReturnType<T>> : {
-    [K in keyof T]: Plugify<T[K]>;
-};
-
-export function LoadApp<T>(rawSchema: Raw<T>, url: string): Plugify<T> {
+export function LoadApp<T>(rawSchema: Raw<T>, url: string): Plugify<T> & AppSettings {
     store.has("apps") || store.new("apps", []); // dunno how I hadn't thought of that awesome pattern before
-    store.update<AppData[]>("apps", (apps) => [...apps, {}]);
-
+    store.update<AppData[]>("apps", (apps) => [...apps, {
+        concurrency_limit: 10,
+        default_stale: 3600,
+        unlimited_direct: false,
+    }]);
+    const id = store.get<AppData[]>("apps").length - 1;
     delete rawSchema["::"];
-    const plugs = RawSchemaToPlugs<T>(url, rawSchema as object);
-    return plugs;
+    const plugs = RawSchemaToPlugs(id, url, rawSchema as object);
+    const settingsFunc = () => store.get<AppData[]>("apps")[id];
+    settingsFunc.set = (value: Partial<AppData> | ((value: AppData) => AppData)) => {
+        store.update<AppData[]>("apps", (apps) => {
+            const newApps = [...apps];
+            newApps[id] = {
+                ...apps[id],
+                ...value instanceof Function ? value(apps[id]) : {
+                    ...apps[id],
+                    ...value
+                }
+            };
+            return newApps;
+        });
+    };
+    return {
+        ...plugs,
+        $settings: settingsFunc
+    };
 }
 
 
-function RawSchemaToPlugs<T>(url: string, schema: object, path?: string) {
+function RawSchemaToPlugs(app: number, url: string, schema: object, path?: string) {
     path ??= "/";
     return Object.fromEntries(Object.entries(schema).map(([key, value]) => {
         if(key === "$"){
-            return [key, value.map((f: Function) => Plug(url, path, f))];
+            return [key, value.map((f: Function) => GeneratePlug(app, url, path, f))];
         }
         if(key.startsWith("$")){
-            return [key, Plug(url, path, value)];
+            return [key, GeneratePlug(app, url, path, value)];
         }
-        return [key, RawSchemaToPlugs(url, value, `${path}${key}/`)];
+        return [key, RawSchemaToPlugs(app, url, value, `${path}${key}/`)];
     }));
-}
-
-function Plug(url: string, path: string, format: object) {
-    return () => ({url, path, args: format});
 }
