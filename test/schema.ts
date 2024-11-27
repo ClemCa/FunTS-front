@@ -65,14 +65,35 @@ enum StatusCode {
    ServerErrorNetworkAuthRequired = 511
 }
 export type Schema = {
-      $: [({a, b, c}: {a: number, b: number, c: number}) => string, () => [StatusCode, string]],
-      $1: ({a, b, c}: {a: number, b: number, c: number}) => string,
-      $2: () => [StatusCode, string],
-      noshape: {
-         $: () => [StatusCode, string]
+      fetch: {
+         mock: {
+            user: {
+               $: ({UID}: {UID: string}) => unknown
+            },
+            theme: {
+               $: ({UID}: {UID: string}) => unknown
+            },
+            server: {
+               $: ({UID}: {UID: string}) => unknown
+            },
+            channel: {
+               $: ({UID}: {UID: string}) => unknown
+            },
+            notification: {
+               $: ({UID}: {UID: string}) => unknown
+            },
+            message: {
+               $: [({UID}: {UID: string}) => unknown, ({channel, limit, offset}: {channel: string, limit: number, offset: number}) => unknown],
+               $1: ({UID}: {UID: string}) => unknown,
+               $2: ({channel, limit, offset}: {channel: string, limit: number, offset: number}) => unknown
+            },
+            language: {
+               $: ({UID}: {UID: string}) => unknown
+            }
+         }
       }
    }
-const raw = {"$":[[{"a":0,"b":0,"c":0},"unknown"],[{},"status"]],"$1":[{"a":0,"b":0,"c":0},"unknown"],"$2":[{},"status"],"noshape":{"$":[{},"status"]}}
+const raw = {"fetch":{"mock":{"user":{"$":[{"UID":""},"unknown"]},"theme":{"$":[{"UID":""},"unknown"]},"server":{"$":[{"UID":""},"unknown"]},"channel":{"$":[{"UID":""},"unknown"]},"notification":{"$":[{"UID":""},"unknown"]},"message":{"$":[[{"UID":""},"unknown"],[{"channel":"","limit":0,"offset":0},"unknown"]],"$1":[{"UID":""},"unknown"],"$2":[{"channel":"","limit":0,"offset":0},"unknown"]},"language":{"$":[{"UID":""},"unknown"]}}}}
 type Raw<T> = object & {"::": {}}
 export const schema = {
    ...raw,

@@ -64,15 +64,18 @@ export function GenerateSpark(app: number, url: string, path: string, format: ob
             });
             return obj as any;
         },
-        catch: () => new Promise<void>(() => WaitForRequest(id))
+        catch: () => WaitForRequest(id)
     };
     return obj as Spark<any>;
 }
 
 async function WaitForRequest(uid: string) {
+    console.log("wait for request", uid);
     if(!IsRequestActive(uid)) return;
+    console.log("request active");
     return new Promise<void>((resolve) => {
         const callback = () => {
+            console.log("resolving")
             resolve();
         };
         RegisterCallback(uid, callback);

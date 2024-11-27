@@ -4,12 +4,13 @@ import { store } from "./internal";
 import { AppData, RequestBase } from "./types";
 
 const appsFragment = store.fragment<AppData[]>("apps");
-let running = true;
+let running = false;
 let concurrent = new Map<number, number>();
 let ongoing = new Map<number, boolean>();
 
 export async function ActiveLoop() {
     if(running) return;
+    console.log("starting active loop")
     const apps = appsFragment.get().length;
     running = true;
     let any = true;

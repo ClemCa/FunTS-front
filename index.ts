@@ -36,7 +36,7 @@ export function LoadApp<T>(rawSchema: Raw<T>, url: string): Plugify<T> & AppSett
 function RawSchemaToPlugs(app: number, url: string, schema: object, path?: string) {
     path ??= "/";
     return Object.fromEntries(Object.entries(schema).map(([key, value]) => {
-        if(key === "$"){
+        if(key === "$" && Array.isArray(value[0])){
             return [key, value.map((f: Function) => GeneratePlug(app, url, path, f))];
         }
         if(key.startsWith("$")){

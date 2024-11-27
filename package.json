@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "build": "tsc && tsc-alias",
-    "test": "./dist/test.js"
+    "test": "node dist/test.js"
   },
   "repository": {
     "type": "git",
