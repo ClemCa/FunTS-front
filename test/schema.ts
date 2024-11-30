@@ -68,32 +68,35 @@ export type Schema = {
       fetch: {
          mock: {
             user: {
-               $: ({UID}: {UID: string}) => unknown
+               $: ({UID}: {UID: string}) => {ID: string, name: string, status: string, languages: string[], typing: boolean, presence: "online" | "busy" | "away" | "offline", banner: string, servers: string[]}[]
             },
             theme: {
-               $: ({UID}: {UID: string}) => unknown
+               $: ({UID}: {UID: string}) => {name: string, tailwind: string[], rgb: string[]}[]
             },
             server: {
-               $: ({UID}: {UID: string}) => unknown
+               $: ({UID}: {UID: string}) => {ID: string, name: string, icon: string, banner: string, channels: string[], members: string[]}[]
             },
             channel: {
-               $: ({UID}: {UID: string}) => unknown
+               $: ({UID}: {UID: string}) => {ID: string, name: string, status: {online: number, busy: number, away: number}, languages: string[], mode: "romanized-only" | "native-only" | "both"}[]
             },
             notification: {
-               $: ({UID}: {UID: string}) => unknown
+               $: ({UID}: {UID: string}) => ({type: "DM", user: "1", message: "Hello, world!", timestamp: 1732929753358} | {type: "unread", channel: "mock1", user: "1", message: "Hello, world!", timestamp: 1732929753358} | {type: "mention", channel: "mock2", user: "1", message: "Hello, world!", timestamp: 1732929753358})
             },
             message: {
-               $: [({UID}: {UID: string}) => unknown, ({channel, limit, offset}: {channel: string, limit: number, offset: number}) => unknown],
-               $1: ({UID}: {UID: string}) => unknown,
-               $2: ({channel, limit, offset}: {channel: string, limit: number, offset: number}) => unknown
+               $: [({UID}: {UID: string}) => {ID: string, user: string, channel: string, message: string, timestamp: number}[], ({channel, limit, offset}: {channel: string, limit: number, offset: number}) => string[]],
+               $1: ({UID}: {UID: string}) => {ID: string, user: string, channel: string, message: string, timestamp: number}[],
+               $2: ({channel, limit, offset}: {channel: string, limit: number, offset: number}) => string[]
             },
             language: {
-               $: ({UID}: {UID: string}) => unknown
+               $: ({UID}: {UID: string}) => {ID: string, name: string, short: string}[]
             }
          }
+      },
+      test: {
+         $: () => "Hello, world!"
       }
    }
-const raw = {"fetch":{"mock":{"user":{"$":[{"UID":""},"unknown"]},"theme":{"$":[{"UID":""},"unknown"]},"server":{"$":[{"UID":""},"unknown"]},"channel":{"$":[{"UID":""},"unknown"]},"notification":{"$":[{"UID":""},"unknown"]},"message":{"$":[[{"UID":""},"unknown"],[{"channel":"","limit":0,"offset":0},"unknown"]],"$1":[{"UID":""},"unknown"],"$2":[{"channel":"","limit":0,"offset":0},"unknown"]},"language":{"$":[{"UID":""},"unknown"]}}}}
+const raw = {"fetch":{"mock":{"user":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","status":"","languages":[""],"typing":false,"presence":["online","busy","away","offline"],"banner":"","servers":[""]}]]},"theme":{"$":[{"UID":""},["clemDyn",{"name":"","tailwind":[""],"rgb":[""]}]]},"server":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","icon":"","banner":"","channels":[""],"members":[""]}]]},"channel":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","status":{"online":0,"busy":0,"away":0},"languages":[""],"mode":["romanized-only","native-only","both"]}]]},"notification":{"$":[{"UID":""},["clemDyn",[{"type":"DM","user":"1","message":"Hello, world!","timestamp":1732929753358},{"type":"unread","channel":"mock1","user":"1","message":"Hello, world!","timestamp":1732929753358},{"type":"mention","channel":"mock2","user":"1","message":"Hello, world!","timestamp":1732929753358}]]]},"message":{"$":[[{"UID":""},["clemDyn",{"ID":"","user":"","channel":"","message":"","timestamp":0}]],[{"channel":"","limit":0,"offset":0},["clemDyn",[""]]]],"$1":[{"UID":""},["clemDyn",{"ID":"","user":"","channel":"","message":"","timestamp":0}]],"$2":[{"channel":"","limit":0,"offset":0},["clemDyn",[""]]]},"language":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","short":""}]]}}},"test":{"$":[{},["\"Hello, world!\""]]}}
 type Raw<T> = object & {"::": {}}
 export const schema = {
    ...raw,
