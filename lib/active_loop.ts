@@ -12,8 +12,10 @@ export async function ActiveLoop() {
     if(running) return;
     const apps = appsFragment.get().length;
     running = true;
-    let any = true;
-    while (any) {
+    let any = false;
+    do {
+        await new Promise((res) => setTimeout(res, 10)); // it does slow down the first iteration by 10ms, but at the scale of web requests, it's fine
+        any = false;
         for(let i = 0; i < apps; i++) {
             if(ongoing.get(i)) {
                 any = true;
@@ -26,8 +28,8 @@ export async function ActiveLoop() {
                 any = true;
             }
         }
-        await new Promise((res) => setTimeout(res, 10));
     }
+    while(any);
     running = false;
 }
 

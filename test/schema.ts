@@ -80,7 +80,7 @@ export type Schema = {
                $: ({UID}: {UID: string}) => {ID: string, name: string, status: {online: number, busy: number, away: number}, languages: string[], mode: "romanized-only" | "native-only" | "both"}[]
             },
             notification: {
-               $: ({UID}: {UID: string}) => ({type: "DM", user: "1", message: "Hello, world!", timestamp: 1732929753358} | {type: "unread", channel: "mock1", user: "1", message: "Hello, world!", timestamp: 1732929753358} | {type: "mention", channel: "mock2", user: "1", message: "Hello, world!", timestamp: 1732929753358})
+               $: ({UID}: {UID: string}) => ({type: string, user: string, message: string, timestamp: number} | {type: string, channel: string, user: string, message: string, timestamp: number})
             },
             message: {
                $: [({UID}: {UID: string}) => {ID: string, user: string, channel: string, message: string, timestamp: number}[], ({channel, limit, offset}: {channel: string, limit: number, offset: number}) => string[]],
@@ -96,10 +96,9 @@ export type Schema = {
          $: () => "Hello, world!"
       }
    }
-const raw = {"fetch":{"mock":{"user":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","status":"","languages":[""],"typing":false,"presence":["online","busy","away","offline"],"banner":"","servers":[""]}]]},"theme":{"$":[{"UID":""},["clemDyn",{"name":"","tailwind":[""],"rgb":[""]}]]},"server":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","icon":"","banner":"","channels":[""],"members":[""]}]]},"channel":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","status":{"online":0,"busy":0,"away":0},"languages":[""],"mode":["romanized-only","native-only","both"]}]]},"notification":{"$":[{"UID":""},["clemDyn",[{"type":"DM","user":"1","message":"Hello, world!","timestamp":1732929753358},{"type":"unread","channel":"mock1","user":"1","message":"Hello, world!","timestamp":1732929753358},{"type":"mention","channel":"mock2","user":"1","message":"Hello, world!","timestamp":1732929753358}]]]},"message":{"$":[[{"UID":""},["clemDyn",{"ID":"","user":"","channel":"","message":"","timestamp":0}]],[{"channel":"","limit":0,"offset":0},["clemDyn",[""]]]],"$1":[{"UID":""},["clemDyn",{"ID":"","user":"","channel":"","message":"","timestamp":0}]],"$2":[{"channel":"","limit":0,"offset":0},["clemDyn",[""]]]},"language":{"$":[{"UID":""},["clemDyn",{"ID":"","name":"","short":""}]]}}},"test":{"$":[{},["\"Hello, world!\""]]}}
-type Raw<T> = object & {"::": {}}
+const raw = {"fetch":{"mock":{"user":{"$":[{"UID":0},{"ID":"","name":"","status":"","languages":[],"typing":false,"presence":"online","banner":"","servers":[]}]},"theme":{"$":[{"UID":0},{"name":"","tailwind":[],"rgb":[]}]},"server":{"$":[{"UID":0},{"ID":"","name":"","icon":"","banner":"","channels":[],"members":[]}]},"channel":{"$":[{"UID":0},{"ID":"","name":"","status":{"online":0,"busy":0,"away":0},"languages":[],"mode":"romanized-only"}]},"notification":{"$":[{"UID":0},{"type":"","user":"","message":"","timestamp":0}]},"message":{"$":[[{"UID":0},{"ID":"","user":"","channel":"","message":"","timestamp":0}],[{"channel":0,"limit":0,"offset":0},[]]],"$1":[{"UID":0},{"ID":"","user":"","channel":"","message":"","timestamp":0}],"$2":[{"channel":0,"limit":0,"offset":0},[]]},"language":{"$":[{"UID":0},{"ID":"","name":"","short":""}]}}},"test":{"$":"Hello, world!"}}
 export const schema = {
    ...raw,
    "::": {}
-} as Raw<Schema>
+} as unknown as Schema;
 export default schema

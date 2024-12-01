@@ -2,7 +2,7 @@ import { store } from "lib/internal";
 import { GeneratePlug } from "lib/plug";
 import { AppData, AppSettings, Plugify, Raw } from "lib/types";
 
-export function LoadApp<T>(rawSchema: Raw<T>, url: string): Plugify<T> & AppSettings {
+export function LoadApp<T>(rawSchema: T, url: string): Plugify<T> & AppSettings {
     store.has("apps") || store.new("apps", []); // dunno how I hadn't thought of that awesome pattern before
     store.update<AppData[]>("apps", (apps) => [...apps, {
         concurrency_limit: 10,
@@ -37,7 +37,7 @@ function RawSchemaToPlugs(app: number, url: string, schema: object, path?: strin
     path ??= "/";
     return Object.fromEntries(Object.entries(schema).map(([key, value]) => {
         if(key === "$" && Array.isArray(value[0])){
-            return [key, value.map((f: Function) => GeneratePlug(app, url, path, f))];
+            return [key, value.map((f: [any, any]) => GeneratePlug(app, url, path, f))];
         }
         if(key.startsWith("$")){
             return [key, GeneratePlug(app, url, path, value)];

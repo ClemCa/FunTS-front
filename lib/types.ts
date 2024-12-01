@@ -12,15 +12,15 @@ export type AppSettings = {
     }
 }
 
-export type Volatile = string | number | boolean;
-
-export type VolatileBottle<T> = {
+type VolatileBottle<T> = {
     value: T;
     caught: boolean;
     uncork: () => T;
 }
 
-export type Bottle<T, U> = U extends true ? VolatileBottle<T> : T extends object ? T : VolatileBottle<T>;
+type SubBottle<T> = T extends object ? T : VolatileBottle<T>;
+
+export type Bottle<T, U> = U extends true ? U extends undefined ? SubBottle<T> : VolatileBottle<T> : SubBottle<T>;
 
 export type Spark<T> = {
     with: (opt: {

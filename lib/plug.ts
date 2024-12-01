@@ -5,7 +5,7 @@ import { AppData, Plug, Spark } from "./types";
 
 const apps = store.fragment<AppData[]>("apps");
 
-export function GeneratePlug(app: number, url: string, path: string, format: any): () => Plug<any, any> {
+export function GeneratePlug(app: number, url: string, path: string, format: [any, any]): () => Plug<any, any> {
     return () => {
         const func = (args: any) => GenerateSpark(app, url, path, format, args, true);
         func.queue = (args: any) => GenerateSpark(app, url, path, format, args, false);
@@ -14,7 +14,7 @@ export function GeneratePlug(app: number, url: string, path: string, format: any
     };
 }
 
-export function GenerateSpark(app: number, url: string, path: string, format: any, args: any, immediate: boolean): Spark<any> {
+export function GenerateSpark(app: number, url: string, path: string, format: [any, any], args: any, immediate: boolean): Spark<any> {
     const id = GenerateUID();
     const appData = apps.get()[app];
     const request = {
@@ -44,13 +44,21 @@ export function GenerateSpark(app: number, url: string, path: string, format: an
             request.expectation = opt.expectation ?? request.expectation;
             return this as Spark<any>;
         },
-        promise: () => new Promise<any>(async () => {
+        promise: async () => {
             await WaitForRequest(id);
             return GetCachedRequest(url, path, args);
-        }),
+        },
         bottle: (forceVolatile?: boolean) => {
-            if(!forceVolatile && typeof format === "object") {
-                const obj = {...format};
+            if(!forceVolatile && typeof format[1] === "object") {
+                if(Array.isArray(format[1])) {
+                    const arr = [];
+                    WaitForRequest(id).then(() => {
+                        const response = GetCachedRequest(url, path, args) as any[];
+                        arr.push(...response);
+                    });
+                    return arr as any;
+                }
+                const obj = {...format[1]};
                 WaitForRequest(id).then(() => {
                     const response = GetCachedRequest(url, path, args);
                     for (const key in response) {
