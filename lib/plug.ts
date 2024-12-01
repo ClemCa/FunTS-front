@@ -5,7 +5,7 @@ import { AppData, Plug, Spark } from "./types";
 
 const apps = store.fragment<AppData[]>("apps");
 
-export function GeneratePlug(app: number, url: string, path: string, format: object): () => Plug<any, any> {
+export function GeneratePlug(app: number, url: string, path: string, format: any): () => Plug<any, any> {
     return () => {
         const func = (args: any) => GenerateSpark(app, url, path, format, args, true);
         func.queue = (args: any) => GenerateSpark(app, url, path, format, args, false);
@@ -14,7 +14,7 @@ export function GeneratePlug(app: number, url: string, path: string, format: obj
     };
 }
 
-export function GenerateSpark(app: number, url: string, path: string, format: object, args: any, immediate: boolean): Spark<any> {
+export function GenerateSpark(app: number, url: string, path: string, format: any, args: any, immediate: boolean): Spark<any> {
     const id = GenerateUID();
     const appData = apps.get()[app];
     const request = {
@@ -48,7 +48,17 @@ export function GenerateSpark(app: number, url: string, path: string, format: ob
             await WaitForRequest(id);
             return GetCachedRequest(url, path, args);
         }),
-        bottle: () => {
+        bottle: (forceVolatile?: boolean) => {
+            if(!forceVolatile && typeof format === "object") {
+                const obj = {...format};
+                WaitForRequest(id).then(() => {
+                    const response = GetCachedRequest(url, path, args);
+                    for (const key in response) {
+                        obj[key] = response[key];
+                    }
+                });
+                return obj as any;
+            }
             const obj = {
                 value: null,
                 caught: false,
@@ -70,12 +80,9 @@ export function GenerateSpark(app: number, url: string, path: string, format: ob
 }
 
 async function WaitForRequest(uid: string) {
-    console.log("wait for request", uid);
     if(!IsRequestActive(uid)) return;
-    console.log("request active");
     return new Promise<void>((resolve) => {
         const callback = () => {
-            console.log("resolving")
             resolve();
         };
         RegisterCallback(uid, callback);

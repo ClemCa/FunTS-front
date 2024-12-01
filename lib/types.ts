@@ -14,13 +14,13 @@ export type AppSettings = {
 
 export type Volatile = string | number | boolean;
 
-export type VolatileBottle<T extends Volatile> = {
+export type VolatileBottle<T> = {
     value: T;
     caught: boolean;
     uncork: () => T;
 }
 
-export type Bottle<T> = T extends Volatile ? VolatileBottle<T> : T;
+export type Bottle<T, U> = U extends true ? VolatileBottle<T> : T extends object ? T : VolatileBottle<T>;
 
 export type Spark<T> = {
     with: (opt: {
@@ -30,7 +30,7 @@ export type Spark<T> = {
         renewable?: boolean,
     }) => Spark<T>;
     promise: () => Promise<T>;
-    bottle: () => Bottle<T>;
+    bottle<U extends boolean | undefined>(forceVolatile?: U): Bottle<T, U>;
     catch: () => Promise<void>;
 }
 

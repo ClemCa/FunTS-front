@@ -10,7 +10,6 @@ let ongoing = new Map<number, boolean>();
 
 export async function ActiveLoop() {
     if(running) return;
-    console.log("starting active loop")
     const apps = appsFragment.get().length;
     running = true;
     let any = true;

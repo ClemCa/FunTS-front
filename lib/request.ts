@@ -30,7 +30,6 @@ export function RegisterCallback(id: string, callback: (response: object) => voi
     const current = callbacks.get(id) ?? [];
     current.push(callback);
     callbacks.set(id, current);
-    console.log("callback pushed")
 }
 
 export function IsRequestActive(id: string) {
@@ -38,7 +37,6 @@ export function IsRequestActive(id: string) {
 }
 
 export function Request(request: RequestBase) {
-    console.log("making request", request);
     const requestPath = request.url + request.path;
     const body = JSON.stringify(request.args);
     const headers = {
@@ -53,7 +51,6 @@ export function Request(request: RequestBase) {
     fetch(requestPath, options)
         .then(response => response.json())
         .then(response => {
-            console.log("received request", request);
             const current = callbacks.get(request.id) ?? [];
             activeRequests.splice(activeRequests.indexOf(request.id), 1);
             CacheRequest(request, response)
