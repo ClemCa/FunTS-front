@@ -9,6 +9,7 @@ export function GeneratePlug(app: number, url: string, path: string, format: [an
     return () => {
         const func = (args: any) => GenerateSpark(app, url, path, format, args, true);
         func.queue = (args: any) => GenerateSpark(app, url, path, format, args, false);
+        func.getPath = () => path;
         return func as unknown as Plug<any, any>;
         // aaaah I can't do good type inference without adding way too much unnecessary logic and going through hoops :(
     };
