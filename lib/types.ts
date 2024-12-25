@@ -37,6 +37,7 @@ export type Spark<T> = {
 export type Plug<T, U> = () => {
     (args: T): Spark<U>;
     queue: (args: T) => Spark<U>;
+    getPath: () => string;
 }
 
 export type ArgsType<T> = T extends (...args: infer U) => any ? U[0] : never;
