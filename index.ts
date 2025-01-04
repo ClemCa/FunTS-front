@@ -1,6 +1,7 @@
+import { BatchSparks } from "lib/batching";
 import { store } from "lib/internal";
 import { GeneratePlug } from "lib/plug";
-import { AppData, AppSettings, Plugify, Raw } from "lib/types";
+import { AppData, AppSettings, Plugify, Raw, Spark } from "lib/types";
 
 export function LoadApp<T>(rawSchema: T, url: string): Plugify<T> & AppSettings {
     store.has("apps") || store.new("apps", []); // dunno how I hadn't thought of that awesome pattern before
@@ -21,14 +22,16 @@ export function LoadApp<T>(rawSchema: T, url: string): Plugify<T> & AppSettings 
                 ...value instanceof Function ? value(apps[id]) : {
                     ...apps[id],
                     ...value
-                }
+                },
             };
             return newApps;
         });
     };
     return {
         ...plugs,
-        $settings: settingsFunc
+        $settings: settingsFunc,
+        $batch: (...args: Spark<T>[]) => BatchSparks(id, url, args),
+        __storeRef: store, // for GC avoidance purposes
     };
 }
 

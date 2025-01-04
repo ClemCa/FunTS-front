@@ -1,21 +1,23 @@
 import { GetCachedRequest } from "./cache";
 import { GenerateUID, store } from "./internal";
-import { HitRequest, IsRequestActive, RegisterCallback } from "./request";
+import { Cancellation, HitRequest, IsRequestActive, RegisterCallback } from "./request";
 import { AppData, Plug, Spark } from "./types";
 
 const apps = store.fragment<AppData[]>("apps");
 
 export function GeneratePlug(app: number, url: string, path: string, format: [any, any]): () => Plug<any, any> {
     return () => {
-        const func = (args: any) => GenerateSpark(app, url, path, format, args, true);
-        func.queue = (args: any) => GenerateSpark(app, url, path, format, args, false);
+        const func = (args: any) => GenerateSpark(app, url, path, format, args, true, false, false);
+        func.queue = (args: any) => GenerateSpark(app, url, path, format, args, false, false, false);
         func.getPath = () => path;
+        func.batch = (...args: any[]) => GenerateSpark(app, url, path, format, args, true, true, false);
+        func.batch['queue'] = (...args: any[]) => GenerateSpark(app, url, path, format, args, false, true, false);
         return func as unknown as Plug<any, any>;
         // aaaah I can't do good type inference without adding way too much unnecessary logic and going through hoops :(
     };
 }
 
-export function GenerateSpark(app: number, url: string, path: string, format: [any, any], args: any, immediate: boolean): Spark<any> {
+export function GenerateSpark(app: number, url: string, path: string, format: [any, any], args: any, immediate: boolean, singleBatch: boolean, multiBatch: boolean): Spark<any> {
     const id = GenerateUID();
     const appData = apps.get()[app];
     const request = {
@@ -29,10 +31,17 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
         renewable: false,
         expectation: 1,
         buildUp: 1,
+        singleBatched: singleBatch,
+        multiBatched: multiBatch,
         callback: () => {}
     };
-    HitRequest(request, immediate);
+    const cancel = new Cancellation();
+    HitRequest(request, immediate, cancel);
     const obj = {
+        cancel: () => {
+            cancel.cancel();
+        },
+        generationData: () => [path, format, args],
         with: (opt: {
             priority?: number,
             expectation?: number,
@@ -46,22 +55,19 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
             return this as Spark<any>;
         },
         promise: async () => {
-            await WaitForRequest(id);
-            return GetCachedRequest(url, path, args);
+            return await WaitForRequest(id);
         },
         bottle: (forceVolatile?: boolean) => {
             if(!forceVolatile && typeof format[1] === "object") {
                 if(Array.isArray(format[1])) {
                     const arr = [];
-                    WaitForRequest(id).then(() => {
-                        const response = GetCachedRequest(url, path, args) as any[];
+                    WaitForRequest(id).then((response: any) => {
                         arr.push(...response);
                     });
                     return arr as any;
                 }
                 const obj = {...format[1]};
-                WaitForRequest(id).then(() => {
-                    const response = GetCachedRequest(url, path, args);
+                WaitForRequest(id).then((response: any) => {
                     for (const key in response) {
                         obj[key] = response[key];
                     }
@@ -76,8 +82,7 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
                     return this.value;
                 }
             }
-            WaitForRequest(id).then(() => {
-                const response = GetCachedRequest(url, path, args);
+            WaitForRequest(id).then((response) => {
                 obj.value = response;
                 obj.caught = true;
             });
@@ -91,8 +96,8 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
 async function WaitForRequest(uid: string) {
     if(!IsRequestActive(uid)) return;
     return new Promise<void>((resolve) => {
-        const callback = () => {
-            resolve();
+        const callback = (val) => {
+            resolve(val);
         };
         RegisterCallback(uid, callback);
     });

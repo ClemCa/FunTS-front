@@ -9,7 +9,8 @@ export type AppSettings = {
     $settings: {
         (): AppData;
         set: (value: Partial<AppData> | ((value: AppData) => AppData)) => void;
-    }
+    },
+    $batch<T extends Spark<any>[]>(...args: T): SparkBatch<T>,
 }
 
 type VolatileBottle<T> = {
@@ -21,6 +22,11 @@ type VolatileBottle<T> = {
 type SubBottle<T> = T extends object ? T : VolatileBottle<T>;
 
 export type Bottle<T, U> = U extends true ? U extends undefined ? SubBottle<T> : VolatileBottle<T> : SubBottle<T>;
+
+export type SparkBatch<T> = Spark<{
+    [K in keyof T]: T[K] extends Spark<infer U> ? U : never;
+}>;
+
 
 export type Spark<T> = {
     with: (opt: {
@@ -38,6 +44,9 @@ export type Plug<T, U> = () => {
     (args: T): Spark<U>;
     queue: (args: T) => Spark<U>;
     getPath: () => string;
+    batch: ((...args: T[]) => Spark<U[]>) & {
+        queue: (...args: T[]) => Spark<U[]>;
+    }
 }
 
 export type ArgsType<T> = T extends (...args: infer U) => any ? U[0] : never;
@@ -56,5 +65,7 @@ export type RequestBase = {
     stale: number;
     renewable: boolean;
     buildUp: number;
+    singleBatched: boolean;
+    multiBatched: boolean;
     callback: (response: object) => void;
 }

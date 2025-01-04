@@ -8,7 +8,7 @@ type Extension<T> = {
     validate: (value: T) => boolean;
 }
 
-class Fragment<T> {
+export class Fragment<T> {
     private __internal: string;
     private __store: Store;
     constructor(fragment: string, store: Store) {
