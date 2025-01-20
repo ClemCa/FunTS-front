@@ -3,6 +3,7 @@ export type AppData = {
     concurrency_limit: number;
     default_stale: number;
     unlimited_direct: boolean;
+    auto_batch: boolean;
 }
 
 export type AppSettings = {

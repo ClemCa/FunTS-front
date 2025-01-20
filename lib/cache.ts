@@ -10,16 +10,12 @@ export function CacheRequest(request: RequestBase, response) {
     if(request.singleBatched) {
         for(let i = 0; i < (request.args as any[]).length; i++) {
             const [code, res] = StripStatusCode(response[i]);
-            // TODO : handle status codes
+            if(code !== 200) continue; // TODO deal with status codes, retries, etc
             cache.update((map) => map.set(request.url + request.path + JSON.stringify(request.args[i]), [staleBy, res]));
         }
         return;
     } else if (request.multiBatched) {
-        for(let i = 0; i < (request.args as any[]).length; i++) {
-            const [code, res] = StripStatusCode(response[i]);
-            // TODO : handle status codes
-            cache.update((map) => map.set(request.url + request.args[i][0] + JSON.stringify(request.args[i][1]), [staleBy, response[i]]));
-        }
+        // we assume it's dealt with upstream
         return;
     }
     cache.update((map) => map.set(request.url + request.path + JSON.stringify(request.args), [staleBy, response]));

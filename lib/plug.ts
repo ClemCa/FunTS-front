@@ -55,19 +55,19 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
             return this as Spark<any>;
         },
         promise: async () => {
-            return await WaitForRequest(id);
+            return await AwaitRequest(id, url, path, args);
         },
         bottle: (forceVolatile?: boolean) => {
             if(!forceVolatile && typeof format[1] === "object") {
                 if(Array.isArray(format[1])) {
                     const arr = [];
-                    WaitForRequest(id).then((response: any) => {
+                    AwaitRequest(id, url, path, args).then((response: any) => {
                         arr.push(...response);
                     });
                     return arr as any;
                 }
                 const obj = {...format[1]};
-                WaitForRequest(id).then((response: any) => {
+                AwaitRequest(id, url, path, args).then((response: any) => {
                     for (const key in response) {
                         obj[key] = response[key];
                     }
@@ -82,13 +82,13 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
                     return this.value;
                 }
             }
-            WaitForRequest(id).then((response) => {
+            AwaitRequest(id, url, path, args).then((response) => {
                 obj.value = response;
                 obj.caught = true;
             });
             return obj as any;
         },
-        catch: () => WaitForRequest(id)
+        catch: () => WaitForRequest(id),
     };
     return obj as Spark<any>;
 }
@@ -103,3 +103,12 @@ async function WaitForRequest(uid: string) {
     });
 }
 
+async function AwaitRequest(uid: string, url: string, path: string, args: any) {
+    if(!IsRequestActive(uid)) return GetCachedRequest(url, path, args);
+    return new Promise<object>((resolve) => {
+        const callback = (val) => {
+            resolve(val);
+        };
+        RegisterCallback(uid, callback);
+    });
+}

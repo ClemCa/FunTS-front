@@ -9,6 +9,7 @@ export function LoadApp<T>(rawSchema: T, url: string): Plugify<T> & AppSettings 
         concurrency_limit: 10,
         default_stale: 3600,
         unlimited_direct: false,
+        auto_batch: true,
     }]);
     const id = store.get<AppData[]>("apps").length - 1;
     delete rawSchema["::"];
