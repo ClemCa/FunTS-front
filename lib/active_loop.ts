@@ -8,6 +8,7 @@ let running = false;
 let concurrent = new Map<number, number>();
 let ongoing = new Map<number, boolean>();
 
+let next;
 export async function ActiveLoop() {
     if(running) return;
     const apps = appsFragment.get();
@@ -22,14 +23,13 @@ export async function ActiveLoop() {
                 continue;
             }
             if(apps[i].auto_batch && NextIsBatchable(i)) {
-                let next = GetAllReady(i);
+                next = GetAllReady(i);
                 if(next.length > 0) {
                     ongoing.set(i, true);
                     ForAppBatch(next);
                     any = true;
                 }
             } else {
-                let next;
                 if(next = GetNext(i)) {
                     ongoing.set(i, true);
                     ForApp(next);

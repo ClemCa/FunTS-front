@@ -24,6 +24,13 @@ export class Fragment<T> {
     update(fn: (value: T) => T) {
         return this.__store.update(this.__internal, fn);
     }
+    is(action: (value: T) => boolean) {
+        const value = this.get();
+        if(value === undefined) {
+            return false;
+        }
+        return action(value);
+    }
     do(action: (value: T) => void) {
         const value = this.get();
         if(value === undefined) {

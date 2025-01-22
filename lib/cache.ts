@@ -1,6 +1,6 @@
 import { Invalidate } from "./queue";
-import { store } from "./internal";
-import { RequestBase } from "./types";
+import { apps, CompareValues, store } from "./internal";
+import { AppData, RequestBase } from "./types";
 
 const cache = store.new("cache", new Map<string, [number, object | null]>());
 
@@ -11,13 +11,18 @@ export function CacheRequest(request: RequestBase, response) {
         for(let i = 0; i < (request.args as any[]).length; i++) {
             const [code, res] = StripStatusCode(response[i]);
             if(code !== 200) continue; // TODO deal with status codes, retries, etc
-            cache.update((map) => map.set(request.url + request.path + JSON.stringify(request.args[i]), [staleBy, res]));
+            CacheRequest({ ...request, singleBatched: false, args: request.args[i] }, res);
         }
         return;
     } else if (request.multiBatched) {
         // we assume it's dealt with upstream
         return;
     }
+    // don't want to re-cache the same response
+    if(cache.is((cache) => cache.has(request.url + request.path + JSON.stringify(request.args)) && CompareValues(cache.get(request.url + request.path + JSON.stringify(request.args))[1], response)))
+        return;
+    if(apps.is((apps) => apps[request.app].verbose))
+        console.log("Caching", request.url + request.path + JSON.stringify(request.args));
     cache.update((map) => map.set(request.url + request.path + JSON.stringify(request.args), [staleBy, response]));
 }
 
@@ -28,12 +33,17 @@ function StripStatusCode(response) {
     return response;
 }
 
-export function HasCachedRequest(url: string, path: string, args: any) { //! side effect is cache invalidation
+export function HasCachedRequest(url: string, path: string, args: any, disableInvalidation: boolean = false) { //! side effect is cache invalidation
     const current_cache = cache.get();
     if(!current_cache.has(url + path + JSON.stringify(args))) return false;
+    if(disableInvalidation) return true;
     const [staleBy, _] = current_cache.get(url + path + JSON.stringify(args));
     if(staleBy < Date.now()) {
         cache.update((map) => {
+            if(apps.is((apps) => apps[0].verbose))
+            {
+                console.log("Removing stale cache entry", url + path + JSON.stringify(args));
+            }
             map.delete(url + path + JSON.stringify(args));
             return map;
         });

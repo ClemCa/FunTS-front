@@ -4,6 +4,7 @@ export type AppData = {
     default_stale: number;
     unlimited_direct: boolean;
     auto_batch: boolean;
+    verbose: boolean;
 }
 
 export type AppSettings = {
@@ -69,4 +70,7 @@ export type RequestBase = {
     singleBatched: boolean;
     multiBatched: boolean;
     callback: (response: object) => void;
+}
+export type RequestOptimized = RequestBase & {
+    original: RequestBase;
 }

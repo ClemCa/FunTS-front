@@ -1,7 +1,7 @@
 import { GetCachedRequest } from "./cache";
 import { GenerateUID, store } from "./internal";
 import { Cancellation, HitRequest, IsRequestActive, RegisterCallback } from "./request";
-import { AppData, Plug, Spark } from "./types";
+import { AppData, Plug, RequestBase, Spark } from "./types";
 
 const apps = store.fragment<AppData[]>("apps");
 
@@ -18,7 +18,7 @@ export function GeneratePlug(app: number, url: string, path: string, format: [an
 }
 
 export function GenerateSpark(app: number, url: string, path: string, format: [any, any], args: any, immediate: boolean, singleBatch: boolean, multiBatch: boolean): Spark<any> {
-    const id = GenerateUID();
+    let id = GenerateUID();
     const appData = apps.get()[app];
     const request = {
         id,
@@ -36,12 +36,16 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
         callback: () => {}
     };
     const cancel = new Cancellation();
-    HitRequest(request, immediate, cancel);
+    id = HitRequest(request, immediate, cancel, id);
+    if(id !== request.id && apps.is((v) => v[app].verbose)) {
+        console.log("Request fused into the existing version in queue", request.url + request.path + JSON.stringify(request.args));
+    }
+    request.id = id;
     const obj = {
         cancel: () => {
             cancel.cancel();
         },
-        generationData: () => [path, format, args],
+        generationData: () => [path, format, args, singleBatch, multiBatch, id],
         with: (opt: {
             priority?: number,
             expectation?: number,
@@ -55,19 +59,19 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
             return this as Spark<any>;
         },
         promise: async () => {
-            return await AwaitRequest(id, url, path, args);
+            return await AwaitRequest(request);
         },
         bottle: (forceVolatile?: boolean) => {
             if(!forceVolatile && typeof format[1] === "object") {
                 if(Array.isArray(format[1])) {
                     const arr = [];
-                    AwaitRequest(id, url, path, args).then((response: any) => {
+                    AwaitRequest(request).then((response: any) => {
                         arr.push(...response);
                     });
                     return arr as any;
                 }
                 const obj = {...format[1]};
-                AwaitRequest(id, url, path, args).then((response: any) => {
+                AwaitRequest(request).then((response: any) => {
                     for (const key in response) {
                         obj[key] = response[key];
                     }
@@ -82,7 +86,7 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
                     return this.value;
                 }
             }
-            AwaitRequest(id, url, path, args).then((response) => {
+            AwaitRequest(request).then((response) => {
                 obj.value = response;
                 obj.caught = true;
             });
@@ -96,19 +100,31 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
 async function WaitForRequest(uid: string) {
     if(!IsRequestActive(uid)) return;
     return new Promise<void>((resolve) => {
-        const callback = (val) => {
-            resolve(val);
+        const callback = () => {
+            resolve();
         };
         RegisterCallback(uid, callback);
     });
 }
 
-async function AwaitRequest(uid: string, url: string, path: string, args: any) {
-    if(!IsRequestActive(uid)) return GetCachedRequest(url, path, args);
+async function AwaitRequest(request: RequestBase) {
+    if(!IsRequestActive(request.id)) {
+        if(request.singleBatched) {
+            return (request.args as object[]).map((arg) => {
+                return GetCachedRequest(request.url, request.path, arg);
+            });
+        }
+        if(request.multiBatched) {
+            return (request.args as object[]).map((arg) => {
+                return GetCachedRequest(request.url, arg[0], arg[1]);
+            });
+        }
+        return GetCachedRequest(request.url, request.path, request.args);
+    }
     return new Promise<object>((resolve) => {
         const callback = (val) => {
             resolve(val);
         };
-        RegisterCallback(uid, callback);
+        RegisterCallback(request.id, callback);
     });
 }

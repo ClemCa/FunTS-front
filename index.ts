@@ -1,7 +1,7 @@
 import { BatchSparks } from "lib/batching";
 import { store } from "lib/internal";
 import { GeneratePlug } from "lib/plug";
-import { AppData, AppSettings, Plugify, Raw, Spark } from "lib/types";
+import { AppData, AppSettings, Plugify, Spark } from "lib/types";
 
 export function LoadApp<T>(rawSchema: T, url: string): Plugify<T> & AppSettings {
     store.has("apps") || store.new("apps", []); // dunno how I hadn't thought of that awesome pattern before
@@ -10,6 +10,7 @@ export function LoadApp<T>(rawSchema: T, url: string): Plugify<T> & AppSettings 
         default_stale: 3600,
         unlimited_direct: false,
         auto_batch: true,
+        verbose: false,
     }]);
     const id = store.get<AppData[]>("apps").length - 1;
     delete rawSchema["::"];
