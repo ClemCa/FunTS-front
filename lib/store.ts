@@ -45,10 +45,19 @@ export class Fragment<T> {
         }
         action(value);
     }
+    callback(action: (value: T) => void, check: (value: T) => boolean = undefined, once: boolean = true) {
+        const value = this.get();
+        if(!check || check(value)) {
+            action(value);
+            return;
+        }
+        this.__store.onUpdate(this.__internal, action, check, once);
+    }
 }
 
 export class Store {
     private __internal = new Map<string, Element<any>>();
+    private __listeners = new Map<string, [((value: any) => void), ((value: any) => boolean) | undefined, boolean][]>();
     new<T>(key: string, value: T): Fragment<T | undefined> {
         this.set(key, value);
         return new Fragment<T | undefined>(key, this);
@@ -75,6 +84,7 @@ export class Store {
                 this.set(key, value);
             }
         });
+        this.triggerUpdate(key);
     }
     update<T>(key: string, fn: (value: T) => T) {
         if(this.__internal.has(key)) {
@@ -84,6 +94,32 @@ export class Store {
         const element = this.__internal.get(key);
         element.value = fn(element.value);
         this.__internal.set(key, element);
+        this.triggerUpdate(key);
         return element.value;
+    }
+    onUpdate<T>(key: string, fn: (value: T) => void, check: (value: T) => boolean, removeValid: boolean = false) {
+        if(!this.__listeners.has(key)) {
+            this.__listeners.set(key, []);
+        }
+        const listeners = this.__listeners.get(key);
+        listeners.push([fn, check, removeValid]);
+        this.__listeners.set(key, listeners);
+    }
+    private triggerUpdate(key: string) {
+        if(!this.__listeners.has(key)) {
+            return;
+        }
+        const listeners = this.__listeners.get(key);
+        const element = this.__internal.get(key);
+        for(let i = listeners.length - 1; i >= 0; i--) {
+            const [fn, check, removeValid] = listeners[i];
+            if(!check || check(element.value)) {
+                fn(element.value);
+                if(removeValid) {
+                    listeners.splice(i, 1);
+                    this.__listeners.set(key, listeners);
+                }
+            }
+        }
     }
 }

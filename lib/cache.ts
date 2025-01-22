@@ -57,3 +57,26 @@ export function GetCachedRequest(url: string, path: string, args: any) {
     const [_, response] = current_cache.get(url + path + JSON.stringify(args)) ?? [0, null];
     return response;
 }
+
+export function SubscribeToValue(url: string, path: string, args: any) {
+    return new Promise((resolve) => {
+        const listener = (value) => {
+            resolve(value);
+        };
+        cache.callback(listener, (value) => value.has(url + path + JSON.stringify(args)), true);
+    });
+}
+
+export function SubscribeToValues(...values: { url: string, path: string, args: any }[]) {
+    return new Promise((resolve) => {
+        const listener = (value) => {
+            resolve(value);
+        };
+        cache.callback(listener, (value) => {
+            for(const val of values) {
+                if(!value.has(val.url + val.path + JSON.stringify(val.args))) return false;
+            }
+            return true;
+        }, true);
+    });
+}

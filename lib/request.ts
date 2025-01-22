@@ -1,5 +1,5 @@
 import { ActiveLoop } from "./active_loop";
-import { GetCachedRequest, CacheRequest, HasCachedRequest } from "./cache";
+import { GetCachedRequest, CacheRequest, HasCachedRequest, SubscribeToValues } from "./cache";
 import { store } from "./internal";
 import { DequeuePassive, Enqueue, HasRequestQueued, PassiveQueue } from "./queue";
 import { AppData, RequestBase, RequestOptimized } from "./types";
@@ -231,18 +231,22 @@ function EmptyRequest(request: RequestBase) {
 function PostQueueBatch(request: RequestBase) {
     activeRequests.push(request.id);
     setTimeout(async () => {
-        for(const arg of request.args as object[]) {
-            while(request.singleBatched && !HasCachedRequest(request.url, request.path, arg, true)) {
-                await new Promise((res) => setTimeout(res, 10));
-            }
-            while(request.multiBatched && !HasCachedRequest(request.url, arg[0], arg[1], true)) {
-                await new Promise((res) => setTimeout(res, 10))
-            }
-        }
+        const allPairs = AllPairs(request);
+        await SubscribeToValues(...allPairs.map(([path, args]) => ({ url: request.url, path, args })));
         const response = (request.args as object[]).map((arg) => GetCachedRequest(request.url, request.singleBatched ? request.path : arg[0], request.singleBatched ? arg : arg[1]));
         const current = callbacks.get(request.id) ?? [];
         activeRequests.splice(activeRequests.indexOf(request.id), 1);
         callbacks.delete(request.id);
         current.forEach(callback => callback(response));
     }, 0);
+}
+
+function AllPairs(request: RequestBase): [string, any][] {
+    if(request.multiBatched) {
+        return (request.args as object[]).map((arg) => AllPairs({ ...request, path: arg[0], args: arg[1], singleBatched: arg[2], multiBatched: arg[3], id: arg[4] })).flat();
+    }
+    if(request.singleBatched) {
+        return (request.args as object[]).map((arg) => AllPairs({ ...request, singleBatched: false, args: arg })).flat();
+    }
+    return [[request.path, request.args]];
 }
