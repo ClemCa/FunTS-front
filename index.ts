@@ -1,31 +1,39 @@
 import { BatchSparks } from "lib/batching";
 import { store } from "lib/internal";
 import { GeneratePlug } from "lib/plug";
-import { AppData, AppSettings, Plugify, Spark } from "lib/types";
+import { AppData, AppSettings, InternalAppData, Plugify, Spark } from "lib/types";
 
 export function LoadApp<T>(rawSchema: T, url: string): Plugify<T> & AppSettings {
     store.has("apps") || store.new("apps", []); // dunno how I hadn't thought of that awesome pattern before
-    store.update<AppData[]>("apps", (apps) => [...apps, {
+    const app = {
         concurrency_limit: 10,
         default_stale: 3600,
         unlimited_direct: false,
         auto_batch: true,
         verbose: false,
-    }]);
+        log: (message?: any, ...optionalParams: any[]) => {
+            if(app.verbose) console.log(message, ...optionalParams);
+        },
+    } satisfies InternalAppData;
+    store.update<AppData[]>("apps", (apps) => [...apps, app]);
     const id = store.get<AppData[]>("apps").length - 1;
     delete rawSchema["::"];
     const plugs = RawSchemaToPlugs(id, url, rawSchema as object);
     const settingsFunc = () => store.get<AppData[]>("apps")[id];
     settingsFunc.set = (value: Partial<AppData> | ((value: AppData) => AppData)) => {
-        store.update<AppData[]>("apps", (apps) => {
+        store.update<InternalAppData[]>("apps", (apps) => {
             const newApps = [...apps];
-            newApps[id] = {
+            const newApp = {
                 ...apps[id],
                 ...value instanceof Function ? value(apps[id]) : {
                     ...apps[id],
                     ...value
                 },
+                log(message?: any, ...optionalParams: any[]) {
+                    if(newApp.verbose) console.log(message, ...optionalParams);
+                }
             };
+            newApps[id] = newApp;
             return newApps;
         });
     };

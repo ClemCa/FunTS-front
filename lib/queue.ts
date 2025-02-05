@@ -38,7 +38,28 @@ export function HasRequestQueued(request: RequestBase, passiveCheck: boolean = f
         }).filter((arg) => arg !== null);
         return [newArgs.length === 0, newArgs];
     }
-    const index = queueToUse.findIndex((queued) => queued.id != request.id && stripParentheses(queued.path) === stripParentheses(request.path) && queued.app === request.app && CompareValues(queued.args, request.args) ? true : false);
+    function batchCheck(request: RequestBase, args: object[], multiBatched: boolean) {
+        // request is always not batched as decomposed by HasRequestQueued
+        if (multiBatched) {
+            return args.some((arg) => {
+                if (arg[2]) return batchCheck(request, arg[1], false);
+                if (arg[3]) return batchCheck(request, arg[1], true);
+                return arg[0] === request.path && arg[1] === request.args;
+            });
+        }
+        return args.some((arg) => CompareValues(arg, request.args));
+    }
+    const index = queueToUse.findIndex((queued) => /* queued.id != request.id */
+        // we don't actually want to check for the id, as we call this before pushing to queue, and it actively works against multi batched, which take in a spark that is already hit
+        stripParentheses(queued.path) === stripParentheses(request.path)
+        && queued.app === request.app
+        && (
+            (CompareValues(queued.args, request.args) ? true : false)
+            || (
+                (queued.singleBatched || queued.multiBatched)
+                && batchCheck(request, queued.args, queued.multiBatched)
+            )
+        ));
     return [index !== -1, queueToUse[index]];
 }
 
@@ -78,7 +99,7 @@ export function GetNext(app: number) {
     if (next === -1) return null;
     const request = queue.splice(next, 1)[0];
     if (IsRequestLate(request)) {
-        if (apps.is((apps) => apps[app].verbose)) console.log("Request was cached after creation and could be skipped", request.url + request.path + JSON.stringify(request.args));
+        apps.get()[app].log("Request was cached after creation and could be skipped", request.url + request.path + JSON.stringify(request.args));
         return GetNext(app)
     };
     return request;

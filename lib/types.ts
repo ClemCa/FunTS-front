@@ -7,6 +7,8 @@ export type AppData = {
     verbose: boolean;
 }
 
+export type InternalAppData = AppData & { log(...args): void };
+
 export type AppSettings = {
     $settings: {
         (): AppData;

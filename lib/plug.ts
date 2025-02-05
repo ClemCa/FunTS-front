@@ -1,9 +1,9 @@
 import { GetCachedRequest } from "./cache";
 import { GenerateUID, store } from "./internal";
 import { Cancellation, HitRequest, IsRequestActive, RegisterCallback } from "./request";
-import { AppData, Plug, RequestBase, Spark } from "./types";
+import { InternalAppData, Plug, RequestBase, Spark } from "./types";
 
-const apps = store.fragment<AppData[]>("apps");
+const apps = store.fragment<InternalAppData[]>("apps");
 
 export function GeneratePlug(app: number, url: string, path: string, format: [any, any]): () => Plug<any, any> {
     return () => {
@@ -37,8 +37,8 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
     };
     const cancel = new Cancellation();
     id = HitRequest(request, immediate, cancel, id);
-    if(id !== request.id && apps.is((v) => v[app].verbose)) {
-        console.log("Request fused into the existing version in queue", request.url + request.path + JSON.stringify(request.args));
+    if(id !== request.id) {
+        apps.get()[app].log("Request bound to the existing version in queue", request.url + request.path + JSON.stringify(request.args));
     }
     request.id = id;
     const obj = {

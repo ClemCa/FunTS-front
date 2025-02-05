@@ -1,8 +1,8 @@
 import { Store } from "./store";
-import { AppData } from "./types";
+import { InternalAppData } from "./types";
 
 export const store = new Store();
-export const apps = store.fragment<AppData[]>("apps");
+export const apps = store.fragment<(InternalAppData)[]>("apps");
 
 export function GenerateUID() {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

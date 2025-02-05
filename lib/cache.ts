@@ -21,8 +21,7 @@ export function CacheRequest(request: RequestBase, response) {
     // don't want to re-cache the same response
     if(cache.is((cache) => cache.has(request.url + request.path + JSON.stringify(request.args)) && CompareValues(cache.get(request.url + request.path + JSON.stringify(request.args))[1], response)))
         return;
-    if(apps.is((apps) => apps[request.app].verbose))
-        console.log("Caching", request.url + request.path + JSON.stringify(request.args));
+    apps.get()[request.app].log("Caching", request.url + request.path + JSON.stringify(request.args));
     cache.update((map) => map.set(request.url + request.path + JSON.stringify(request.args), [staleBy, response]));
 }
 
@@ -33,6 +32,7 @@ function StripStatusCode(response) {
     return response;
 }
 
+
 export function HasCachedRequest(url: string, path: string, args: any, disableInvalidation: boolean = false) { //! side effect is cache invalidation
     const current_cache = cache.get();
     if(!current_cache.has(url + path + JSON.stringify(args))) return false;
@@ -40,10 +40,7 @@ export function HasCachedRequest(url: string, path: string, args: any, disableIn
     const [staleBy, _] = current_cache.get(url + path + JSON.stringify(args));
     if(staleBy < Date.now()) {
         cache.update((map) => {
-            if(apps.is((apps) => apps[0].verbose))
-            {
-                console.log("Removing stale cache entry", url + path + JSON.stringify(args));
-            }
+            apps.get()[0].log("Removing stale cache entry", url + path + JSON.stringify(args));
             map.delete(url + path + JSON.stringify(args));
             return map;
         });
@@ -51,6 +48,7 @@ export function HasCachedRequest(url: string, path: string, args: any, disableIn
     }
     return true;
 }
+
 
 export function GetCachedRequest(url: string, path: string, args: any) {
     const current_cache = cache.get();

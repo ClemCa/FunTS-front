@@ -1,9 +1,9 @@
 import { GetAllReady, GetNext, NextIsBatchable } from "./queue";
 import { BatchRequests, RegisterCallback, Request } from "./request";
 import { GenerateUID, store } from "./internal";
-import { AppData, RequestBase } from "./types";
+import { InternalAppData, RequestBase } from "./types";
 
-const appsFragment = store.fragment<AppData[]>("apps");
+const appsFragment = store.fragment<InternalAppData[]>("apps");
 let running = false;
 let concurrent = new Map<number, number>();
 let ongoing = new Map<number, boolean>();

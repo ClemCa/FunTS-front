@@ -1,12 +1,12 @@
 import { ActiveLoop } from "./active_loop";
 import { GetCachedRequest, CacheRequest, HasCachedRequest, SubscribeToValues } from "./cache";
-import { store } from "./internal";
+import { CompareValues, store } from "./internal";
 import { DequeuePassive, Enqueue, HasRequestQueued, PassiveQueue } from "./queue";
-import { AppData, RequestBase, RequestOptimized } from "./types";
+import { InternalAppData, RequestBase, RequestOptimized } from "./types";
 
 const activeRequests = [] as string[];
 const callbacks = new Map<string, ((response: object) => void)[]>();
-const apps = store.fragment<AppData[]>("apps");
+const apps = store.fragment<InternalAppData[]>("apps");
 
 export class Cancellation {
     cancelled = false;
@@ -18,76 +18,84 @@ export class Cancellation {
     }
 }
 
+
+
+function batchClean(url: string, path: string, args: object[], multiBatched: boolean, disableInvalidation: boolean = false, topLevel: boolean = true) {
+    function cleanEmpty(arr: any[], cancel: boolean) { // passing to avoid having the function capture the topLevel variable and being unable to be optimized
+        if(!cancel && arr.length === 0) return null;
+        return arr;
+    }
+    if (multiBatched) {
+        return cleanEmpty(args.map((arg) => {
+            if (arg[2]) return batchClean(url, arg[0], arg[1], false, disableInvalidation, false);
+            if (arg[3]) return batchClean(url, arg[0], arg[1], true, disableInvalidation, false);
+            return HasCachedRequest(url, arg[0], arg[1], disableInvalidation) ? null : arg;
+        }).filter((arg) => arg !== null), topLevel);
+    }
+    return cleanEmpty(args.filter((arg) => !HasCachedRequest(url, path, arg, disableInvalidation)), topLevel);
+}
+
 export function HitRequest(request: RequestBase, immediate: boolean, cancellation: Cancellation, id: string): string {
+    const app = apps.get()[request.app];
     if (request.singleBatched) {
-        const freshArgs = (request.args as object[]).map((arg) => HasCachedRequest(request.url, request.path, arg) ? null : arg).filter((arg) => arg !== null);
+        const freshArgs = batchClean(request.url, request.path, request.args as object[], false);
         if (freshArgs.length === 0) {
-            if (apps.is((apps) => apps[request.app].verbose)) {
-                console.log("Batched request had all elements in cache", request.url + request.path + JSON.stringify(request.args));
-            }
+            app.log("Batched request had all elements in cache", request.url + request.path + JSON.stringify(request.args));
             EmptyRequest(request);
             return id;
         }
-        if(freshArgs.length !== (request.args as object[]).length && apps.is((apps) => apps[request.app].verbose)) {
-            console.log("Batched request had some elements in cache", request.url + request.path + JSON.stringify(request.args));
+        if (freshArgs.length !== (request.args as object[]).length) {
+            app.log("Batched request had some elements in cache", request.url + request.path + JSON.stringify(request.args));
         }
         const [queued, newArgs] = HasRequestQueued(request) as [boolean, object[]];
         if (queued) {
-            if (apps.is((apps) => apps[request.app].verbose)) {
-                console.log("Batched request was already in queue", request.url + request.path + JSON.stringify(request.args));
-            }
+            app.log("Batched request was already in queue", request.url + request.path + JSON.stringify(request.args));
             PostQueueBatch(request);
             return id;
         }
-        if (newArgs.length != (request.args as any[]).length && apps.is((apps) => apps[request.app].verbose)) {
-            console.log("Batched request had some elements already in queue", request.url + request.path + JSON.stringify(request.args));
+        if (newArgs.length != (request.args as any[]).length) {
+            app.log("Batched request had some elements already in queue", request.url + request.path + JSON.stringify(request.args));
+        } else {
+            app.log("Batched request is fresh", request.url + request.path + JSON.stringify(request.args));
         }
         request.args = newArgs;
     } else if (request.multiBatched) {
-        const freshArgs = (request.args as object[]).map((arg) => HasCachedRequest(request.url, arg[0], arg[1]) ? null : arg).filter((arg) => arg !== null);
+        const freshArgs = batchClean(request.url, request.path, request.args as object[], true);
         if (freshArgs.length === 0) {
-            if (apps.is((apps) => apps[request.app].verbose)) {
-                console.log("Multi-batched request had all elements in cache", request.url + request.path + JSON.stringify(request.args));
-            }
+            app.log("Multi-batched request had all elements in cache", request.url + request.path + JSON.stringify(request.args));
             EmptyRequest(request);
             return id;
         }
-        if(freshArgs.length !== (request.args as object[]).length && apps.is((apps) => apps[request.app].verbose)) {
-            console.log("Multi-batched request had some elements in cache", request.url + request.path + JSON.stringify(request.args));
+        if (freshArgs.length !== (request.args as object[]).length) {
+            app.log("Multi-batched request had some elements in cache", request.url + request.path + JSON.stringify(request.args));
         }
         const [queued, newArgs] = HasRequestQueued(request) as [boolean, object[]];
         if (queued) {
-            if (apps.is((apps) => apps[request.app].verbose)) {
-                console.log("Multi-batched request was already in queue", request.url + request.path + JSON.stringify(request.args));
-            }
+            app.log("Multi-batched request was already in queue", request.url + request.path + JSON.stringify(request.args));
             PostQueueBatch(request);
             return id;
         }
-        if (newArgs.length != (request.args as any[]).length && apps.is((apps) => apps[request.app].verbose)) {
-            console.log("Multi-batched request had some elements already in queue", request.url + request.path + JSON.stringify(request.args));
+        if (newArgs.length != (request.args as any[]).length) {
+            app.log("Multi-batched request had some elements already in queue", request.url + request.path + JSON.stringify(request.args));
+        } else {
+            app.log("Multi-batched request is fresh", request.url + request.path + JSON.stringify(request.args));
         }
         request.args = newArgs;
     } else {
         if (HasCachedRequest(request.url, request.path, request.args)) {
-            if (apps.is((apps) => apps[request.app].verbose)) {
-                console.log("From cache", request.url + request.path + JSON.stringify(request.args));
-            }
+            app.log("From cache", request.url + request.path + JSON.stringify(request.args));
             return id;
         }
         const [queued, existing] = HasRequestQueued(request);
         if (queued) {
-            if (apps.is((apps) => apps[request.app].verbose)) {
-                console.log("Request already queued", request.url + request.path + JSON.stringify(request.args));
-            }
+            app.log("Request already queued", request.url + request.path + JSON.stringify(request.args));
             return (existing as RequestBase).id;
         }
+        app.log("Request is fresh", request.url + request.path + JSON.stringify(request.args));
     }
     ActiveLoop();
-    const app = apps.get()[request.app];
     activeRequests.push(id);
-    if (apps.is((apps) => apps[request.app].verbose)) {
-        console.log("Queueing", request.url + request.path + JSON.stringify(request.args));
-    }
+    app.log("Queueing", request.url + request.path + JSON.stringify(request.args));
     PassiveQueue(request);
     setTimeout(() => { // to leave a chance to modify the request (with or cancel)
         if (cancellation.isCancelled()) {
@@ -96,9 +104,7 @@ export function HitRequest(request: RequestBase, immediate: boolean, cancellatio
             return;
         }
         if (immediate && app.unlimited_direct) {
-            if (apps.is((apps) => apps[request.app].verbose)) {
-                console.log("[Unlimited direct requests active] Directly hitting", request.url + request.path + JSON.stringify(request.args));
-            }
+            app.log("[Unlimited direct requests active] Directly hitting", request.url + request.path + JSON.stringify(request.args));
             DequeuePassive(request);
             Request(request);
             return;
@@ -137,13 +143,11 @@ export function Request(request: RequestBase) {
             try {
                 return response.json();
             } catch (e) {
-                console.error("Failed to parse response as JSON");
-                return response.text();
+                console.error("Failed to parse response as JSON", response);
             }
         }) // TODO : handle status codes
         .then(response => {
-            if (apps.is((apps) => apps[request.app].verbose))
-                console.log("Done", requestPath, body);
+            apps.get()[request.app].log("Done", requestPath, body);
             DealWithResponse(request, response);
         });
 }
@@ -171,12 +175,12 @@ export function BatchRequests(id: string, requests: RequestBase[]) {
     });
     RegisterCallback(id, (object) => {
         if (!Array.isArray(object)) {
-            console.error("Batched request failed (invalid response)");
+            console.error("Batched request failed (invalid response)", object);
             return;
         }
         for (let i = 0; i < requests.length; i++) {
             if (object.length <= i) {
-                console.error("Batched request failed (missing response, version mismatch?)");
+                console.error("Batched request failed (missing response, version mismatch?)", object);
             }
             const [statusCode, response] = object[i];
             if (statusCode !== 200) {
@@ -242,10 +246,10 @@ function PostQueueBatch(request: RequestBase) {
 }
 
 function AllPairs(request: RequestBase): [string, any][] {
-    if(request.multiBatched) {
+    if (request.multiBatched) {
         return (request.args as object[]).map((arg) => AllPairs({ ...request, path: arg[0], args: arg[1], singleBatched: arg[2], multiBatched: arg[3], id: arg[4] })).flat();
     }
-    if(request.singleBatched) {
+    if (request.singleBatched) {
         return (request.args as object[]).map((arg) => AllPairs({ ...request, singleBatched: false, args: arg })).flat();
     }
     return [[request.path, request.args]];
