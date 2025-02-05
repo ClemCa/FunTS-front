@@ -59,7 +59,7 @@ export class Store {
     private __internal = new Map<string, Element<any>>();
     private __listeners = new Map<string, [((value: any) => void), ((value: any) => boolean) | undefined, boolean][]>();
     new<T>(key: string, value: T): Fragment<T | undefined> {
-        this.set(key, value);
+        if(!this.has(key)) this.set(key, value);
         return new Fragment<T | undefined>(key, this);
     }
     has(key: string): boolean {

@@ -7,6 +7,8 @@ import { InternalAppData, RequestBase, RequestOptimized } from "./types";
 const activeRequests = [] as string[];
 const callbacks = new Map<string, ((response: object) => void)[]>();
 const apps = store.fragment<InternalAppData[]>("apps");
+store.new("activeRequests", activeRequests); // to keep a ref to the array and prevent GC
+store.new("callbacks", callbacks);
 
 export class Cancellation {
     cancelled = false;

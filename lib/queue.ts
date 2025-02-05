@@ -1,9 +1,10 @@
 import { HasCachedRequest } from "./cache";
-import { apps, CompareValues } from "./internal";
+import { apps, CompareValues, store } from "./internal";
 import { RequestBase } from "./types";
 
 const queue = [];
 const passiveQueue = [];
+store.new("queues", { queue: queue, passiveQueue: passiveQueue }); // to keep a ref and prevent GC
 
 function RefreshQueue() {
     const maxExpectation = Math.max(...queue.map((request) => request.expectation));
