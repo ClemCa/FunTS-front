@@ -6,7 +6,7 @@ const app = LoadApp(schema, address);
 app.$settings.set({ concurrency_limit: 10, default_stale: 3600, unlimited_direct: false, verbose: true });
 
 const userPlug = app.fetch.mock.user.$();
-console.log("Which test would you like to run?\n(D)eduping\n(B)asic\n(E)xit");
+console.log("Which test would you like to run?\n(D)eduping\n(B)asic\n(W)ith\n(E)xit");
 
 readline.emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
@@ -17,6 +17,9 @@ process.stdin.on('keypress', (str, key) => {
             break;
         case "b":
             Test();
+            break;
+        case "w":
+            WithTest();
             break;
         case "e":
         case "q":
@@ -67,6 +70,16 @@ async function DedupingTest() {
         const plug = app.$batch(userPlug({ UID: "1" }), userPlug.batch({ UID: "2" }, { UID: "3" }), app.$batch(userPlug({ UID: "2" }), userPlug.batch({ UID: "2" }, {"UID": "3"})));
         await plug.promise();
     }, log => Count(log, "Error") === 0 && Count(log, "Multi-batched request had all elements in cache") === 2);
+}
+
+async function WithTest() {
+    await RunAndAssert("With test", async () => {
+        const user1 = userPlug({ UID: "1" }).with({
+            priority: 2,
+        });
+        await user1.promise();
+        console.log("success");
+    }, log => log.endsWith("success\n"));
 }
 
 async function RunAndAssert(name: string, func: () => Promise<void> | void, assertion: (log: string) => boolean) {

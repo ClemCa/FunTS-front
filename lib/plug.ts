@@ -56,7 +56,7 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
             request.stale = opt.stale ?? request.stale;
             request.renewable = opt.renewable ?? request.renewable;
             request.expectation = opt.expectation ?? request.expectation;
-            return this as Spark<any>;
+            return obj as Spark<any>;
         },
         promise: async () => {
             return await AwaitRequest(request);
@@ -82,8 +82,8 @@ export function GenerateSpark(app: number, url: string, path: string, format: [a
                 value: null,
                 caught: false,
                 uncork: () => {
-                    if(!this.caught) throw new Error("Uncork error: Spark not caught");
-                    return this.value;
+                    if(!obj.caught) throw new Error("Uncork error: Spark not caught");
+                    return obj.value;
                 }
             }
             AwaitRequest(request).then((response) => {
