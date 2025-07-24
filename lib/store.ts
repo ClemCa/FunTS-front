@@ -97,6 +97,16 @@ export class Store {
         this.triggerUpdate(key);
         return element.value;
     }
+    delete(key: string): boolean {
+        if(!this.__internal.has(key)) {
+            return false;
+        }
+        const element = this.__internal.get(key);
+        element?.cleanUp();
+        this.__internal.delete(key);
+        this.triggerUpdate(key);
+        return true;
+    }
     onUpdate<T>(key: string, fn: (value: T) => void, check: (value: T) => boolean, removeValid: boolean = false) {
         if(!this.__listeners.has(key)) {
             this.__listeners.set(key, []);
