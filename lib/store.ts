@@ -72,6 +72,13 @@ export class Store {
         const element = this.__internal.get(key);
         return element?.value;
     }
+    forceGet<T>(key: string): T {
+        const element = this.__internal.get(key);
+        if(!element) {
+            throw new Error(`Key "${key}" does not exist in the store.`);
+        }
+        return element.value;
+    }
     set<T>(key: string, value: T): void {
         if(this.__internal.has(key)) {
             const element = this.__internal.get(key);
