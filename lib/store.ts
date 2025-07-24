@@ -75,9 +75,9 @@ export class Store {
         const element = this.__internal.get(key);
         return element?.value;
     }
-    forceGet<T>(key: string): T {
+    forceGet<T>(key: string): Exclude<T, undefined> {
         const element = this.__internal.get(key);
-        if(!element) {
+        if(element === undefined) {
             throw new Error(`Key "${key}" does not exist in the store.`);
         }
         return element.value;
