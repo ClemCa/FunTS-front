@@ -18,6 +18,9 @@ export class Fragment<T> {
     get() {
         return this.__store.get<T>(this.__internal);
     }
+    forceGet() {
+        return this.__store.forceGet<T>(this.__internal);
+    }
     set(value: T | ((value: T | undefined) => T)) {
         this.__store.set(this.__internal, value);
     }
